@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken')
 const JWT_SECRET = 'development'
 const speakeasy = require('speakeasy')
 const nodemailer = require('nodemailer')
-let secret = ''
 class UserController {
 
   static getUser(req, res, next) {
@@ -31,21 +30,21 @@ class UserController {
           const isValid = bcrypt.compareSync(password, user.password)
           if(isValid){
             
-            secret = speakeasy.generateSecret({length: 6})
+            const secret = speakeasy.generateSecret({length: 6})
             // nodemailer
             const transporter = nodemailer.createTransport({
               service: 'gmail',
               auth: {
-                user: ' gandasipayung20@gmail.com',//replace with your email
-                pass: 'bandot69'//replace with your password
+                user: 'testbackendserver@gmail.com',
+                pass: 'testonly123'
               }
             });
 
             const mailOptions = {
-              from: 'gandasipayung20@gmail.com',//replace with your email
-              to: email,//replace with your email
-              subject: `Contact name: ${user.name}`,
-              html:`<h1>Contact details</h1>
+              from: 'gandasipayung20@gmail.com',
+              to: email,
+              subject: `Hello ${user.name} ! Input this code to continue`,
+              html:`
               <h2> Hello ${user.name} !</h2><br>
               <h2> Please input this key to continue </h2><br>
               <h2> Validation Key: ${secret.base32} </h2><br>`
@@ -60,14 +59,12 @@ class UserController {
               }
               else {
                 console.log('Email sent: ' + info.response);
-                let payload = {
-                  id: user.id,
-                  name: user.name,
-                  email: user.email
-                }
-                const token = jwt.sign(payload, JWT_SECRET)
-                res.status(200).json({
-                  msg: 'Login Sucess, Proceed to 2FA'
+                return User.update({
+                  tempAuthKey: secret.base32
+                }, {
+                  where : {
+                    email: user.email
+                  }
                 })
               }
             });
@@ -82,14 +79,44 @@ class UserController {
           })
         }
       })
+      .then(() => {
+        res.status(200).json({
+          msg: `We have sent an email to ${email}, please check the code`
+        })
+      })
       .catch(err => {
         res.status(500).json(err)
       })
   }
 
   static verifyAuthKey (req, res, next) {
-    const { authKey } = req.body
-    
+    const { authKey, email } = req.body
+    User
+      .findOne({ where: { email }})
+      .then(({ dataValues }) => {
+        console.log(dataValues)
+        console.log(authKey)
+        if(dataValues.tempAuthKey === authKey) {
+          let payload = {
+            id: dataValues.id,
+            name: dataValues.name,
+            email: dataValues.email
+          }
+          console.log(payload)
+          const token = jwt.sign(payload, JWT_SECRET)
+          res.status(200).json({
+            msg: 'Login Success',
+            token
+          })
+        } else {
+          res.status(400).json({
+            msg : 'login failed'
+          })
+        }
+      })
+      .catch(err => {
+        res.status(500).json(err)
+      })
   }
 
   static userRegister (req, res, next) {
