@@ -41,7 +41,7 @@ class UserController {
             });
 
             const mailOptions = {
-              from: 'gandasipayung20@gmail.com',
+              from: 'testbackendserver@gmail.com',
               to: email,
               subject: `Hello ${user.name} ! Input this code to continue`,
               html:`
@@ -81,7 +81,7 @@ class UserController {
       })
       .then(() => {
         res.status(200).json({
-          msg: `We have sent an email to ${email}, please check the code`
+          msg: `We have sent an email to ${email}, please check the code in your email`
         })
       })
       .catch(err => {
@@ -94,8 +94,6 @@ class UserController {
     User
       .findOne({ where: { email }})
       .then(({ dataValues }) => {
-        console.log(dataValues)
-        console.log(authKey)
         if(dataValues.tempAuthKey === authKey) {
           let payload = {
             id: dataValues.id,
@@ -110,7 +108,7 @@ class UserController {
           })
         } else {
           res.status(400).json({
-            msg : 'login failed'
+            msg : 'login Failed, please check the code and enter again'
           })
         }
       })
@@ -136,7 +134,9 @@ class UserController {
         res.status(201).json(payload)
       })
       .catch(err => {
-        res.status(400).json(err)
+        res.status(400).json({
+          msg: 'Register Failed, email already used, please use another email'
+        })
       })
   }
 
